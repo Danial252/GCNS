@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UCP Global Climate Monitoring Station</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(to right, #87CEEB, #f0f8ff);
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+    .header {
+      background: skyblue;
+      font-size: 30px;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      padding: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin: 10px;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+      width: 350px;
+    }
+    .title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #0056b3;
+      text-align: center;
+    }
+    .reading {
+      font-size: 18px;
+      margin: 10px 0;
+      text-align: center;
+    }
+    .label {
+      font-size: 16px;
+      font-weight: bold;
+      background: #87CEEB;
+      color: white;
+      padding: 5px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      display: inline-block;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    UCP Global Climate Monitoring Station
+  </div>
+  <div class="container">
+    <div class="card">
+      <div class="title">Temperature</div>
+      <div class="reading"><span class="label">DHT Sensor</span> <span id="temperature">-</span>&degC</div>
+      <canvas id="tempChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">Humidity</div>
+      <div class="reading"><span class="label">DHT Sensor</span> <span id="humidity">-</span> %RH</div>
+      <canvas id="humChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">Pressure</div>
+      <div class="reading"><span class="label">BMP280 Sensor</span> <span id="pressure">-</span> hPa</div>
+      <canvas id="pressureChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">Altitude</div>
+      <div class="reading"><span class="label">BMP280 Sensor</span> <span id="altitude">-</span> m</div>
+      <canvas id="altitudeChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">CO Concentration</div>
+      <div class="reading"><span class="label">MICS6814 Sensor</span> <span id="coPPM">-</span> ppm</div>
+      <canvas id="coChart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">NH3 Concentration</div>
+      <div class="reading"><span class="label">MICS6814 Sensor</span> <span id="nh3PPM">-</span> ppm</div>
+      <canvas id="nh3Chart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">NO2 Concentration</div>
+      <div class="reading"><span class="label">MICS6814 Sensor</span> <span id="no2PPM">-</span> ppm</div>
+      <canvas id="no2Chart"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">Air Quality Index (AQI)</div>
+      <div class="reading"><span class="label">Calculated</span> <span id="aqi">-</span></div>
+      <div class="reading"><span class="label">Category</span> <span id="airQualityCategory">-</span></div>
+    </div>
+    <div class="card">
+      <div class="title">Wind Direction</div>
+      <div class="reading"><span class="label">Direction</span> <span id="windDirection">-</span></div>
+      <canvas id="windDirectionDial"></canvas>
+    </div>
+    <div class="card">
+      <div class="title">7-Day Weather Prediction</div>
+      <table style="width:100%;text-align:center;">
+        <tr><th>Day</th><th>Temperature</th><th>Humidity</th><th>Prediction</th></tr>
+        <tr><td>Monday</td><td id="monTemp">-</td><td id="monHum">-</td><td id="monPred">-</td></tr>
+        <tr><td>Tuesday</td><td id="tueTemp">-</td><td id="tueHum">-</td><td id="tuePred">-</td></tr>
+        <tr><td>Wednesday</td><td id="wedTemp">-</td><td id="wedHum">-</td><td id="wedPred">-</td></tr>
+        <tr><td>Thursday</td><td id="thuTemp">-</td><td id="thuHum">-</td><td id="thuPred">-</td></tr>
+        <tr><td>Friday</td><td id="friTemp">-</td><td id="friHum">-</td><td id="friPred">-</td></tr>
+        <tr><td>Saturday</td><td id="satTemp">-</td><td id="satHum">-</td><td id="satPred">-</td></tr>
+        <tr><td>Sunday</td><td id="sunTemp">-</td><td id="sunHum">-</td><td id="sunPred">-</td></tr>
+      </table>
+    </div>
+  </div>
+  <script>
+    function updateData() {
+      fetch('/data')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('temperature').innerHTML = data.temperature.toFixed(2);
+          document.getElementById('humidity').innerHTML = data.humidity.toFixed(2);
+          document.getElementById('pressure').innerHTML = data.pressure.toFixed(2);
+          document.getElementById('altitude').innerHTML = data.altitude.toFixed(2);
+          document.getElementById('coPPM').innerHTML = data.co.toFixed(2);
+          document.getElementById('nh3PPM').innerHTML = data.nh3.toFixed(2);
+          document.getElementById('no2PPM').innerHTML = data.no2.toFixed(2);
+          document.getElementById('aqi').innerHTML = data.aqi;
+          document.getElementById('airQualityCategory').innerHTML = data.airQualityCategory;
+          document.getElementById('windDirection').innerHTML = data.windDirection;
+          document.getElementById('monTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('monHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('monPred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('tueTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('tueHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('tuePred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('wedTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('wedHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('wedPred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('thuTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('thuHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('thuPred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('friTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('friHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('friPred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('satTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('satHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('satPred').innerHTML = data.weatherPrediction;      // Placeholder values
+          document.getElementById('sunTemp').innerHTML = data.temperature.toFixed(2);  // Placeholder values
+          document.getElementById('sunHum').innerHTML = data.humidity.toFixed(2);      // Placeholder values
+          document.getElementById('sunPred').innerHTML = data.weatherPrediction;      // Placeholder values
+
+          updateCharts(data);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function updateCharts(data) {
+      tempChart.data.datasets[0].data.push(data.temperature);
+      tempChart.update();
+
+      humChart.data.datasets[0].data.push(data.humidity);
+      humChart.update();
+
+      pressureChart.data.datasets[0].data.push(data.pressure);
+      pressureChart.update();
+
+      altitudeChart.data.datasets[0].data.push(data.altitude);
+      altitudeChart.update();
+
+      coChart.data.datasets[0].data.push(data.co);
+      coChart.update();
+
+      nh3Chart.data.datasets[0].data.push(data.nh3);
+      nh3Chart.update();
+
+      no2Chart.data.datasets[0].data.push(data.no2);
+      no2Chart.update();
+    }
+
+    let tempChart = new Chart(document.getElementById('tempChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Temperature (°C)', data: [], borderColor: 'red', fill: false }]
+      }
+    });
+
+    let humChart = new Chart(document.getElementById('humChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Humidity (%)', data: [], borderColor: 'blue', fill: false }]
+      }
+    });
+
+    let pressureChart = new Chart(document.getElementById('pressureChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Pressure (hPa)', data: [], borderColor: 'green', fill: false }]
+      }
+    });
+
+    let altitudeChart = new Chart(document.getElementById('altitudeChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Altitude (m)', data: [], borderColor: 'purple', fill: false }]
+      }
+    });
+
+    let coChart = new Chart(document.getElementById('coChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'CO (ppm)', data: [], borderColor: 'orange', fill: false }]
+      }
+    });
+
+    let nh3Chart = new Chart(document.getElementById('nh3Chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'NH3 (ppm)', data: [], borderColor: 'brown', fill: false }]
+      }
+    });
+
+    let no2Chart = new Chart(document.getElementById('no2Chart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'NO2 (ppm)', data: [], borderColor: 'gray', fill: false }]
+      }
+    });
+
+    let windDirectionDial = new Chart(document.getElementById('windDirectionDial').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['North', 'East', 'South', 'West'],
+        datasets: [{
+          data: [25, 25, 25, 25],
+          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
+          hoverBackgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0']
+        }]
+      },
+      options: {
+        circumference: Math.PI,
+        rotation: Math.PI,
+        cutoutPercentage: 75
+      }
+    });
+
+    setInterval(updateData, 10000);
+  </script>
+</body>
+</html>
